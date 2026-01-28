@@ -3,7 +3,10 @@ const jwt = require('jsonwebtoken');
 
 // Generate JWT token
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'default-secret', {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: '7d'
   });
 };
@@ -227,6 +230,15 @@ exports.getWatchHistory = async (req, res, next) => {
 exports.updateWatchProgress = async (req, res, next) => {
   try {
     const { progress, completed } = req.body;
+    
+    // Validate progress value
+    if (progress < 0 || progress > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'Progress must be between 0 and 100'
+      });
+    }
+    
     const user = await User.findById(req.user.id);
 
     const historyIndex = user.watchHistory.findIndex(
@@ -259,10 +271,10 @@ exports.updateWatchProgress = async (req, res, next) => {
 // Forgot password
 exports.forgotPassword = async (req, res, next) => {
   try {
-    // Implementation placeholder
-    res.json({
-      success: true,
-      message: 'Password reset email sent'
+    // Not implemented yet
+    res.status(501).json({
+      success: false,
+      error: 'Password reset not implemented yet'
     });
   } catch (error) {
     next(error);
@@ -272,10 +284,10 @@ exports.forgotPassword = async (req, res, next) => {
 // Reset password
 exports.resetPassword = async (req, res, next) => {
   try {
-    // Implementation placeholder
-    res.json({
-      success: true,
-      message: 'Password reset successful'
+    // Not implemented yet
+    res.status(501).json({
+      success: false,
+      error: 'Password reset not implemented yet'
     });
   } catch (error) {
     next(error);

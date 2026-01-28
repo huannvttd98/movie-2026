@@ -12,7 +12,7 @@ const connectRedis = async () => {
         reconnectStrategy: (retries) => {
           if (retries > 10) {
             console.error('Redis reconnection failed after 10 attempts');
-            return new Error('Redis connection failed');
+            return false; // Stop reconnecting
           }
           return retries * 100; // Exponential backoff
         }

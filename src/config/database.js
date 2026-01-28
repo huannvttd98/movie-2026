@@ -5,8 +5,6 @@ const connectDB = async () => {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/movie-platform';
     
     await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       maxPoolSize: 100, // Support for high concurrency
       minPoolSize: 10,
       socketTimeoutMS: 45000,

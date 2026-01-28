@@ -15,8 +15,13 @@ exports.authenticate = async (req, res, next) => {
 
     const token = authHeader.substring(7);
 
+    // Verify JWT_SECRET is set
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Get user from token
     const user = await User.findById(decoded.id).select('-password');

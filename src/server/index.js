@@ -8,6 +8,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 
+// Validate required environment variables
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('FATAL ERROR: JWT_SECRET is not defined.');
+  process.exit(1);
+}
+
 const connectDB = require('./config/database');
 const connectRedis = require('./config/redis');
 const movieRoutes = require('./routes/movies');
@@ -19,7 +25,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || '*',
+    origin: process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' ? false : '*'),
     methods: ['GET', 'POST']
   }
 });
@@ -49,7 +55,7 @@ const apiLimiter = rateLimit({
 
 const streamLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 1000, // Allow more requests for streaming
+  max: 5000, // Increased for streaming endpoints
   message: 'Stream rate limit exceeded'
 });
 
@@ -77,6 +83,9 @@ app.use('/api/movies', movieRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stream', streamRoutes);
 
+// Track socket to movie mappings for proper cleanup
+const socketMovies = new Map();
+
 // WebSocket for real-time features
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -84,28 +93,37 @@ io.on('connection', (socket) => {
   // Track concurrent viewers
   socket.on('watching', (movieId) => {
     socket.join(`movie-${movieId}`);
+    socketMovies.set(socket.id, movieId);
     const viewers = io.sockets.adapter.rooms.get(`movie-${movieId}`)?.size || 0;
     io.to(`movie-${movieId}`).emit('viewer-count', viewers);
   });
 
   socket.on('stop-watching', (movieId) => {
     socket.leave(`movie-${movieId}`);
+    socketMovies.delete(socket.id);
     const viewers = io.sockets.adapter.rooms.get(`movie-${movieId}`)?.size || 0;
     io.to(`movie-${movieId}`).emit('viewer-count', viewers);
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    // Clean up viewer count when user disconnects
+    const movieId = socketMovies.get(socket.id);
+    if (movieId) {
+      const viewers = io.sockets.adapter.rooms.get(`movie-${movieId}`)?.size || 0;
+      io.to(`movie-${movieId}`).emit('viewer-count', viewers);
+      socketMovies.delete(socket.id);
+    }
   });
+});
+
+// 404 handler (must be before error handler)
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
 });
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
 
 const PORT = process.env.PORT || 3000;
 
@@ -116,12 +134,15 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+const shutdown = () => {
+  console.log('Shutdown signal received: closing HTTP server');
   server.close(() => {
     console.log('HTTP server closed');
     process.exit(0);
   });
-});
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 module.exports = { app, server, io };

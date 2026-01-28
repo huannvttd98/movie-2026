@@ -70,9 +70,11 @@ exports.searchMovies = async (req, res, next) => {
   try {
     const { q, genre, year } = req.query;
     const query = { status: 'active' };
+    let sortOptions = { createdAt: -1 }; // Default sort
 
     if (q) {
       query.$text = { $search: q };
+      sortOptions = { score: { $meta: 'textScore' } };
     }
     if (genre) {
       query.genres = genre;
@@ -82,7 +84,7 @@ exports.searchMovies = async (req, res, next) => {
     }
 
     const movies = await Movie.find(query)
-      .sort({ score: { $meta: 'textScore' } })
+      .sort(sortOptions)
       .limit(50)
       .select('-__v');
 
