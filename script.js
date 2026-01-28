@@ -12,6 +12,26 @@ const modalBody = document.getElementById('modalBody');
 const closeBtn = document.querySelector('.close-btn');
 const ctaButton = document.querySelector('.cta-button');
 
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Debounce function for performance
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Display movies
 function displayMovies(movies) {
     moviesGrid.innerHTML = '';
@@ -32,15 +52,15 @@ function createMovieCard(movie) {
     const card = document.createElement('div');
     card.className = 'movie-card';
     card.innerHTML = `
-        <img src="${movie.poster}" alt="${movie.title}" class="movie-poster">
+        <img src="${escapeHtml(movie.poster)}" alt="${escapeHtml(movie.title)}" class="movie-poster">
         <div class="movie-info">
-            <h3 class="movie-title">${movie.title}</h3>
+            <h3 class="movie-title">${escapeHtml(movie.title)}</h3>
             <div class="movie-meta">
-                <span class="movie-year">${movie.year}</span>
-                <span class="movie-rating">⭐ ${movie.rating}</span>
+                <span class="movie-year">${escapeHtml(String(movie.year))}</span>
+                <span class="movie-rating">⭐ ${escapeHtml(String(movie.rating))}</span>
             </div>
-            <p class="movie-genre">${capitalizeGenre(movie.genre)}</p>
-            <p class="movie-description">${movie.description}</p>
+            <p class="movie-genre">${escapeHtml(capitalizeGenre(movie.genre))}</p>
+            <p class="movie-description">${escapeHtml(movie.description)}</p>
         </div>
     `;
     
@@ -58,26 +78,35 @@ function capitalizeGenre(genre) {
 // Show movie details in modal
 function showMovieDetails(movie) {
     modalBody.innerHTML = `
-        <img src="${movie.poster}" alt="${movie.title}" class="modal-movie-poster">
-        <h2 class="modal-movie-title">${movie.title}</h2>
+        <img src="${escapeHtml(movie.poster)}" alt="${escapeHtml(movie.title)}" class="modal-movie-poster" id="modalMovieTitle">
+        <h2 class="modal-movie-title">${escapeHtml(movie.title)}</h2>
         <div class="modal-movie-meta">
-            <span>Year: ${movie.year}</span>
-            <span>Genre: ${capitalizeGenre(movie.genre)}</span>
-            <span>Rating: ⭐ ${movie.rating}</span>
+            <span>Year: ${escapeHtml(String(movie.year))}</span>
+            <span>Genre: ${escapeHtml(capitalizeGenre(movie.genre))}</span>
+            <span>Rating: ⭐ ${escapeHtml(String(movie.rating))}</span>
         </div>
-        <p class="modal-movie-description">${movie.description}</p>
-        <button class="play-button" onclick="playMovie('${movie.title}', '${movie.trailer}')">▶ Play Now</button>
+        <p class="modal-movie-description">${escapeHtml(movie.description)}</p>
+        <button class="play-button" id="playMovieBtn">▶ Play Now</button>
         <div id="videoContainer"></div>
     `;
+    
+    // Add event listener to play button
+    document.getElementById('playMovieBtn').addEventListener('click', () => {
+        playMovie(movie.trailer);
+    });
+    
     modal.style.display = 'block';
+    
+    // Trap focus in modal
+    trapFocus();
 }
 
 // Play movie
-function playMovie(title, trailerUrl) {
+function playMovie(trailerUrl) {
     const videoContainer = document.getElementById('videoContainer');
     videoContainer.innerHTML = `
-        <video controls class="video-player" autoplay>
-            <source src="${trailerUrl}" type="video/mp4">
+        <video controls class="video-player">
+            <source src="${escapeHtml(trailerUrl)}" type="video/mp4">
             Your browser does not support the video tag.
         </video>
     `;
@@ -111,11 +140,62 @@ function applyFilters() {
     displayMovies(filteredMovies);
 }
 
+// Close modal and cleanup
+function closeModal() {
+    modal.style.display = 'none';
+    const videoContainer = document.getElementById('videoContainer');
+    if (videoContainer) {
+        videoContainer.innerHTML = '';
+    }
+    // Remove focus trap
+    document.removeEventListener('keydown', handleModalKeydown);
+}
+
+// Trap focus in modal
+function trapFocus() {
+    document.addEventListener('keydown', handleModalKeydown);
+}
+
+// Handle keyboard events in modal
+function handleModalKeydown(e) {
+    // Close on Escape key
+    if (e.key === 'Escape') {
+        closeModal();
+        return;
+    }
+    
+    // Trap focus within modal
+    if (e.key === 'Tab') {
+        const modalContent = document.querySelector('.modal-content');
+        const focusableElements = modalContent.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+        
+        if (e.shiftKey) {
+            if (document.activeElement === firstFocusable) {
+                lastFocusable.focus();
+                e.preventDefault();
+            }
+        } else {
+            if (document.activeElement === lastFocusable) {
+                firstFocusable.focus();
+                e.preventDefault();
+            }
+        }
+    }
+}
+
 // Event Listeners
 genreButtons.forEach(btn => {
     btn.addEventListener('click', function() {
-        genreButtons.forEach(b => b.classList.remove('active'));
+        genreButtons.forEach(b => {
+            b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
+        });
         this.classList.add('active');
+        this.setAttribute('aria-pressed', 'true');
         filterByGenre(this.dataset.genre);
     });
 });
@@ -130,28 +210,20 @@ searchInput.addEventListener('keypress', (e) => {
     }
 });
 
-searchInput.addEventListener('input', (e) => {
+searchInput.addEventListener('input', debounce((e) => {
     if (e.target.value === '') {
         currentMovies = [...moviesData];
         applyFilters();
     }
-});
+}, 300));
 
 closeBtn.addEventListener('click', () => {
-    modal.style.display = 'none';
-    const videoContainer = document.getElementById('videoContainer');
-    if (videoContainer) {
-        videoContainer.innerHTML = '';
-    }
+    closeModal();
 });
 
 window.addEventListener('click', (e) => {
     if (e.target === modal) {
-        modal.style.display = 'none';
-        const videoContainer = document.getElementById('videoContainer');
-        if (videoContainer) {
-            videoContainer.innerHTML = '';
-        }
+        closeModal();
     }
 });
 
