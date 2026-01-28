@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Stream - Your Ultimate Movie Destination</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>🎬 MovieStream</h1>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#movies" class="nav-link">Movies</a>
+                <a href="#genres" class="nav-link">Genres</a>
+                <a href="#about" class="nav-link">About</a>
+            </div>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search movies..." class="search-input">
+                <button id="searchBtn" class="search-btn" aria-label="Search movies">🔍</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h2 class="hero-title">Welcome to MovieStream</h2>
+            <p class="hero-subtitle">Watch unlimited movies anytime, anywhere</p>
+            <button class="cta-button">Browse Movies</button>
+        </div>
+    </section>
+
+    <!-- Filter Section -->
+    <section class="filter-section">
+        <div class="container">
+            <h3>Browse by Genre</h3>
+            <div class="genre-filters">
+                <button class="genre-btn active" data-genre="all" aria-pressed="true">All</button>
+                <button class="genre-btn" data-genre="action" aria-pressed="false">Action</button>
+                <button class="genre-btn" data-genre="comedy" aria-pressed="false">Comedy</button>
+                <button class="genre-btn" data-genre="drama" aria-pressed="false">Drama</button>
+                <button class="genre-btn" data-genre="sci-fi" aria-pressed="false">Sci-Fi</button>
+                <button class="genre-btn" data-genre="thriller" aria-pressed="false">Thriller</button>
+                <button class="genre-btn" data-genre="romance" aria-pressed="false">Romance</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Movies Section -->
+    <section id="movies" class="movies-section">
+        <div class="container">
+            <h2 class="section-title">Featured Movies</h2>
+            <div id="moviesGrid" class="movies-grid">
+                <!-- Movies will be dynamically inserted here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Movie Modal -->
+    <div id="movieModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalMovieTitle">
+        <div class="modal-content">
+            <span class="close-btn" aria-label="Close movie details">&times;</span>
+            <div id="modalBody">
+                <!-- Movie details will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 MovieStream. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="#privacy">Privacy Policy</a>
+                <a href="#terms">Terms of Service</a>
+                <a href="#contact">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="movies-data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
